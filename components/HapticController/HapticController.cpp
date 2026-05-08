@@ -1,21 +1,26 @@
 #include "include/HapticController.hpp"
 
-/** 
- *  =======================================
- *  DECLARACION DE MACROS 
- *  =======================================
- */
+/*******************************************************************************
+ * @file    HapticController.cpp
+ * @brief   Controlador para el feedback háptico mediante Bluetooth BLE
+ * @author  Jose Manuel Enriquez Baena
+ * @date    2026
+******************************************************************************/
+
+// ! ===========================================================================
+// ! SECTION: DEFINICIONES Y MACROS
+// ! ===========================================================================
+
 #define BLE_TAG "BLE"
 #define GATTS_TAG "GATTS"
 #define APP_PROFILE_ID 0
 #define adv_config_flag      (1 << 0)
 #define scan_rsp_config_flag (1 << 1)
 
-/** 
- *  =======================================
- *  DECLARACIONES STATIC
- *  =======================================
- */
+
+// ! ===========================================================================
+// ! SECTION: DECLARACIONES FUNCIONES STATIC
+// ! ===========================================================================
 
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, 
                                         esp_gatt_if_t gatts_if, 
@@ -29,9 +34,11 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event,
                                 esp_ble_gap_cb_param_t *param);
 
 
-/* =========== VARIABLES DE PROFILE =========== */
+// ! ===========================================================================
+// ! SECTION: VARIABLES DE PROFILE
+// ! ===========================================================================
 
-/* Struct para configurar el profile */
+// * --- Struct configuracion profile ---
 struct gatts_profile_inst {
     esp_gatts_cb_t gatts_cb;
     uint16_t gatts_if;
@@ -47,18 +54,21 @@ struct gatts_profile_inst {
     esp_bt_uuid_t descr_uuid;
 };
 
-/* Unico profile que va a tener el esp32*/
+// * --- struct del profile necesario ---
 static struct gatts_profile_inst app_profile = {
     .gatts_cb = gatts_profile_event_handler,
     .gatts_if = ESP_GATT_IF_NONE,
 };
 
-/* =========================================== */
-/*         VARIABLES DE AVISOS Y ESCANEO       */
 
-/* Variable que controla si se ha configurado los avisos. Es un array de flags */
+// ! ===========================================================================
+// ! SECTION: VARIABLES DE AVISOS Y ESCANEO
+// ! ===========================================================================
+
+// ? --- array de flags --- */
 static uint8_t adv_config_done = 0;
 
+// ? --- definicion UUID del servicio ---
 static uint8_t adv_service_uuid128[32] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */
     //first uuid, 16bit, [12],[13] is the value
@@ -67,7 +77,7 @@ static uint8_t adv_service_uuid128[32] = {
     0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
 };
 
-/* struct con los parametros de avisos */
+// ? --- parametros de avisos ---
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min        = ESP_BLE_GAP_ADV_ITVL_MS(20),
     .adv_int_max        = ESP_BLE_GAP_ADV_ITVL_MS(40),
@@ -77,7 +87,7 @@ static esp_ble_adv_params_t adv_params = {
     .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
 
-/* struct con los datos que contiene el aviso */
+// ? --- datos de los mensajes de avisos ---
 static esp_ble_adv_data_t adv_data = {
     .set_scan_rsp = false,
     .include_name = true,
@@ -94,7 +104,7 @@ static esp_ble_adv_data_t adv_data = {
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
 
-/* struct con los datos que contiene el escaneo */
+// ? --- datos de los mensajes de escaneo ---
 static esp_ble_adv_data_t scan_rsp_data = {
     .set_scan_rsp = true,
     .include_name = true,
@@ -111,14 +121,15 @@ static esp_ble_adv_data_t scan_rsp_data = {
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
 
-/* =========================================== */
 
+// ! ===========================================================================
+// ! SECTION: IMPLEMENTACIÓN DE LA CLASE HAPTIC
+// ! ===========================================================================
 
-/* ================================================ */
-/*    IMPLEMENTACION DE LA CLASE HapticController   */
-
+// ? --- Constructor ---
 HapticController::HapticController(int _pin_gpio): pin_gpio(_pin_gpio){}
 
+// ? --- Inicialización de Hardware y Stack BLE ---
 void HapticController::init(){
     esp_err_t ret;
 
@@ -187,12 +198,12 @@ void HapticController::init(){
     }
 }
 
-/* ================================================ */
 
-/*  ================================================ */
-/*         IMPLEMENTACION FUNCIONES BLUETOOTH        */
+// ! ===========================================================================
+// ! SECTION: IMPLEMENTACIÓN FUNCIONES STATIC
+// ! ===========================================================================
  
-/* Esta funcion se encarga de manejar los eventos del app_profile */
+// ? --- Manejador de eventos del profile ---
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, 
                                         esp_gatt_if_t gatts_if, 
                                         esp_ble_gatts_cb_param_t *param){
@@ -228,8 +239,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
     }
 }
 
-/* Esta funcion se encarga de registrar el numero de interfaz al app_profile y 
-de llamar a la callback correspondiente */
+// ? --- Manejador eventos GATTS y configuracion del profile ---
 static void gatts_event_handler(esp_gatts_cb_event_t event, 
                                 esp_gatt_if_t gatts_if, 
                                 esp_ble_gatts_cb_param_t *param)
@@ -256,7 +266,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event,
     }
 }
 
-/* Esta funcion se encarga de gestionar los eventos para configurar el esp32 como peripheral */
+/// ? --- Manejador de eventos GAP para configurarlo como peripheral ---
 static void gap_event_handler(esp_gap_ble_cb_event_t event, 
                             esp_ble_gap_cb_param_t *param)
 {
@@ -305,5 +315,3 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event,
         break;
     }
 }
-
-/* ================================================ */
