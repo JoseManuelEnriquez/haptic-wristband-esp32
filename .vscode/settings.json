@@ -1,9 +1,9 @@
 {
-  "idf.currentSetup": "/home/josemanuel/.espressif/v6.0.1/esp-idf",
+  "idf.currentSetup": "/home/jose/.espressif/v6.0.1/esp-idf",
   "idf.openOcdConfigs": [
     "board/esp32-wrover-kit-3.3v.cfg"
   ],
-  "idf.port": "detect",
+  "idf.port": "/dev/ttyUSB0",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32"
   },
@@ -12,5 +12,6 @@
     "--background-index",
     "--query-driver=**",
     "--compile-commands-dir=/home/josemanuel/workspace/pulsera-vibracion/build"
-  ]
+  ],
+  "idf.flashType": "UART"
 }

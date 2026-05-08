@@ -131,9 +131,12 @@ static HapticController* haptic_controller = nullptr;
 HapticController::HapticController(int _pin_gpio): pin_gpio(_pin_gpio),
                                                    new_write(false),
                                                    last_value(0)
-{
+{}
+
+// ? --- Singleton ---
+HapticController* HapticController::get_instance(int pin_gpio){
     if(!haptic_controller){
-        haptic_controller = this;
+        haptic_controller = new HapticController(pin_gpio);
     }
     return haptic_controller;
 }
@@ -230,64 +233,86 @@ void HapticController::emitir_vibracion(){} // ! Queda por implementar
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, 
                                         esp_gatt_if_t gatts_if, 
                                         esp_ble_gatts_cb_param_t *param){
-    switch (event) {
-    case ESP_GATTS_REG_EVT: // Se configura los datos de escaneo y avisos
-        ESP_LOGI(GATTS_TAG, "GATT server register, status %d, app_id %d, gatts_if %d", param->reg.status, param->reg.app_id, gatts_if);
-        // * Configuracion del servicio
-        app_profile.service_id.is_primary = true;
-        app_profile.service_id.id.inst_id = 0x00;
-        app_profile.service_id.id.uuid.len = ESP_UUID_LEN_16;
-        app_profile.service_id.id.uuid.uuid.uuid16 = GATTS_SERVICE_UUID;
+    switch(event) 
+    {
+        case ESP_GATTS_REG_EVT: { // Se configura los datos de escaneo y avisos
+            ESP_LOGI(GATTS_TAG, "GATT server register, status %d, app_id %d, gatts_if %d", param->reg.status, param->reg.app_id, gatts_if);
+            // * Configuracion del servicio
+            app_profile.service_id.is_primary = true;
+            app_profile.service_id.id.inst_id = 0x00;
+            app_profile.service_id.id.uuid.len = ESP_UUID_LEN_16;
+            app_profile.service_id.id.uuid.uuid.uuid16 = GATTS_SERVICE_UUID;
 
-        esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name("pulsera-vibracion");
-        if (set_dev_name_ret){
-            ESP_LOGE(GATTS_TAG, "set device name failed, error code = %x", set_dev_name_ret);
+            esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name("pulsera-vibracion");
+            if (set_dev_name_ret){
+                ESP_LOGE(GATTS_TAG, "set device name failed, error code = %x", set_dev_name_ret);
+            }
+
+            //config adv data
+            esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
+            if (ret){
+                ESP_LOGE(GATTS_TAG, "config adv data failed, error code = %x", ret);
+            }
+            adv_config_done |= adv_config_flag; // Indicamos que se ha configurado en el array de flags
+
+            //config scan response data
+            ret = esp_ble_gap_config_adv_data(&scan_rsp_data);
+            if (ret){
+                ESP_LOGE(GATTS_TAG, "config scan response data failed, error code = %x", ret);
+            }
+            adv_config_done |= scan_rsp_config_flag; // Indicamos que se ha configurado en el array de flags
+
+            esp_ble_gatts_create_service(gatts_if, &app_profile.service_id, GATTS_NUM_HANDLES); // ! Revisar NUM_HANDLES
+            break;
+        }
+        case ESP_GATTS_CONNECT_EVT:
+            app_profile.conn_id = param->connect.conn_id;
+            ESP_LOGI(GATTS_TAG, "Cliente conectado, conn_id %d", param->connect.conn_id);
+            break;
+
+        case ESP_GATTS_DISCONNECT_EVT:
+                ESP_LOGI(GATTS_TAG, "Cliente desconectado");
+                esp_ble_gap_start_advertising(&adv_params);  // vuelve a anunciar
+                break;
+
+        case ESP_GATTS_CREATE_EVT: { // Creamos las caracteristicas
+
+            ESP_LOGI(GATTS_TAG, "Service create, status %d,  service_handle %d", param->create.status, param->create.service_handle);
+            app_profile.service_handle = param->create.service_handle;
+            app_profile.char_uuid.len = ESP_UUID_LEN_16;
+            app_profile.char_uuid.uuid.uuid16 = HAPTIC_CHAR_UUID;
+
+            esp_ble_gatts_start_service(app_profile.service_handle);
+
+            // * Configuramos solo WRITE
+            app_profile.perm = ESP_GATT_PERM_WRITE;
+            app_profile.property = ESP_GATT_CHAR_PROP_BIT_WRITE;
+            esp_err_t add_char_ret = esp_ble_gatts_add_char(app_profile.service_handle, 
+                                                            &app_profile.char_uuid,
+                                                            app_profile.perm,
+                                                            app_profile.property,
+                                                            NULL, NULL);
+            if (add_char_ret){
+                ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
+            }
+            break;
         }
 
-        //config adv data
-        esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
-        if (ret){
-            ESP_LOGE(GATTS_TAG, "config adv data failed, error code = %x", ret);
+        case ESP_GATTS_WRITE_EVT: {
+
+            if (!param->write.is_prep) {  // write completo, no preparatorio
+                uint8_t speed = param->write.value[0];
+                ESP_LOGI(GATTS_TAG, "Velocidad recibida: %d", speed);
+                if(haptic_controller)
+                    haptic_controller->onWrite(speed);
+            }
+            break;
         }
-        adv_config_done |= adv_config_flag; // Indicamos que se ha configurado en el array de flags
 
-        //config scan response data
-        ret = esp_ble_gap_config_adv_data(&scan_rsp_data);
-        if (ret){
-            ESP_LOGE(GATTS_TAG, "config scan response data failed, error code = %x", ret);
-        }
-        adv_config_done |= scan_rsp_config_flag; // Indicamos que se ha configurado en el array de flags
-
-        esp_ble_gatts_create_service(gatts_if, &app_profile.service_id, GATTS_NUM_HANDLES); // ! Revisar NUM_HANDLES
-        break;
-    }case ESP_GATTS_CREATE_EVT: // Creamos las caracteristicas
-        ESP_LOGI(GATTS_TAG, "Service create, status %d,  service_handle %d", param->create.status, param->create.service_handle);
-        app_profile.service_handle = param->create.service_handle;
-        app_profile.char_uuid.len = ESP_UUID_LEN_16;
-        app_profile.char_uuid.uuid.uuid16 = HAPTIC_CHAR_UUID;
-
-        esp_ble_gatts_start_service(app_profile.service_handle);
-
-        // * Configuramos solo WRITE
-        app_profile.perm = ESP_GATT_PERM_WRITE;
-        app_profile.property = ESP_GATT_CHAR_PROP_BIT_WRITE;
-        esp_err_t add_char_ret = esp_ble_gatts_add_char(app_profile.service_handle, 
-                                                        &app_profile.char_uuid,
-                                                        app_profile.perm,
-                                                        app_profile.property,
-                                                        NULL, NULL);
-        if (add_char_ret){
-            ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
-        }
-        break;
-    case ESP_GATTS_WRITE_EVT:
-    if (!param->write.is_prep) {  // write completo, no preparatorio
-        uint8_t speed = param->write.value[0];
-        ESP_LOGI(GATTS_TAG, "Velocidad recibida: %d", speed);
-        if(haptic_controller)
-            haptic_controller->onWrite(speed);
+        default:
+            ESP_LOGW(GATTS_TAG, "Evento desconocido");
+            break;
     }
-    break;
 }
 
 // ? --- Manejador eventos GATTS y configuracion del profile ---

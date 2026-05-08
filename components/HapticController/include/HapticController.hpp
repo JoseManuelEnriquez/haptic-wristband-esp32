@@ -22,14 +22,15 @@
 
 #include "sdkconfig.h"
 
-class HapticController{
+class HapticController {
     private:
         int pin_gpio;
         bool new_write;
         uint8_t last_value;
-    public:
         HapticController(int _pin_gpio);
+    public:
         void init();
+        static HapticController* get_instance(int pin_gpio);
         void onWrite(uint8_t value);
         uint8_t* hay_escritura();
         void emitir_vibracion();
