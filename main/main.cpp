@@ -1,16 +1,26 @@
 #include <stdio.h>
 #include "HapticController.hpp"
+#include "driver/gpio.h"
+
+#define PIN_PWM GPIO_NUM_13
 
 extern "C" void app_main(void)
 {
-    HapticController* haptic_controller = HapticController::get_instance(18);
-    haptic_controller->init();
+    HapticController* haptic_controller = HapticController::get_instance(PIN_PWM);
+    // haptic_controller->init();
     uint8_t* value;
     while(1){
+        /*
         value = haptic_controller->hay_escritura();
         if(value != nullptr){
             ESP_LOGI("MAIN","Escritura recibida: %d", *value);
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
+        */
+        haptic_controller->emitir_vibracion(0.2);
+        vTaskDelay(pdMS_TO_TICKS(3000));
+        haptic_controller->emitir_vibracion(0.6);
+        vTaskDelay(pdMS_TO_TICKS(3000));
+        haptic_controller->emitir_vibracion(0.0);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     } 
 }

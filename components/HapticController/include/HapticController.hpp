@@ -22,7 +22,6 @@
 #include "esp_bt_device.h"
 #include "esp_gatt_common_api.h"
 
-#include "esp_pm.h"
 #include "driver/ledc.h"
 
 #include "sdkconfig.h"
@@ -38,7 +37,7 @@ class HapticController {
         static HapticController* get_instance(int pin_gpio);
         void onWrite(uint8_t value);
         uint8_t* hay_escritura();
-        void emitir_vibracion(uint8_t potencia);
+        void emitir_vibracion(float potencia);
 };
 
 #endif

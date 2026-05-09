@@ -162,10 +162,10 @@ HapticController* HapticController::get_instance(int pin_gpio){
 
         ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
         ledc_channel_config_t ledc_channel = {
+            .gpio_num       = pin_gpio,
             .speed_mode     = LEDC_MODE,
             .channel        = LEDC_CHANNEL,
             .timer_sel      = LEDC_TIMER,
-            .gpio_num       = pin_gpio,
             .duty           = 0, // Set duty to 0%
             .hpoint         = 0,
             #if CONFIG_PM_ENABLE
@@ -259,9 +259,10 @@ uint8_t* HapticController::hay_escritura(){
     return nullptr;
 }
 
-void HapticController::emitir_vibracion(uint8_t potencia){
-    // Set duty to 50%
-    uint32_t duty = pow(2,13) * (potencia/100);
+void HapticController::emitir_vibracion(float potencia){
+    
+    uint32_t duty = (pow(2,13)) * (potencia);
+    ESP_LOGI("PWM","Duty: %d", duty);
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, duty));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
