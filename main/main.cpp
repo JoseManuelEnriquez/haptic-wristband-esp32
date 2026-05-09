@@ -16,11 +16,8 @@ extern "C" void app_main(void)
             ESP_LOGI("MAIN","Escritura recibida: %d", *value);
         }
         */
-        haptic_controller->emitir_vibracion(0.2);
+        haptic_controller->emitir_vibracion(100);
         vTaskDelay(pdMS_TO_TICKS(3000));
-        haptic_controller->emitir_vibracion(0.6);
-        vTaskDelay(pdMS_TO_TICKS(3000));
-        haptic_controller->emitir_vibracion(0.0);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        haptic_controller->emitir_vibracion(50);
     } 
 }

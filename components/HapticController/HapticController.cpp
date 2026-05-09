@@ -34,6 +34,10 @@
 #define LEDC_FREQUENCY          (4000) // Frequency in Hertz. Set frequency at 4 kHz
 #endif
 
+#define LOW_PULSE 100
+#define FAST_PULSE 50
+#define PULSE_DURATION 20
+#define NUM_PULSE 3
 // ! ===========================================================================
 // ! SECTION: DECLARACIONES FUNCIONES STATIC
 // ! ===========================================================================
@@ -259,13 +263,27 @@ uint8_t* HapticController::hay_escritura(){
     return nullptr;
 }
 
-void HapticController::emitir_vibracion(float potencia){
-    
-    uint32_t duty = (pow(2,13)) * (potencia);
-    ESP_LOGI("PWM","Duty: %d", duty);
-    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, duty));
-    // Update duty to apply the new value
-    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+void HapticController::emitir_vibracion(int value){
+    uint32_t time_pulse;
+    switch (value)
+    {
+        case 100:
+            time_pulse = FAST_PULSE;
+            break;
+        case 50:
+            time_pulse = LOW_PULSE;
+        default:
+            break;
+    }
+    for(int i = 0; i < NUM_PULSE; i++){
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+        vTaskDelay(pdMS_TO_TICKS(PULSE_DURATION));
+
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+        vTaskDelay(pdMS_TO_TICKS(time_pulse));
+    }
 }
 
 // ! ===========================================================================
