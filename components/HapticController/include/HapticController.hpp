@@ -37,7 +37,7 @@ class HapticController {
         static HapticController* get_instance(int pin_gpio);
         void onWrite(uint8_t value);
         uint8_t* hay_escritura();
-        void emitir_vibracion(float potencia);
+        void emitir_vibracion(int value);
 };
 
 #endif

@@ -34,8 +34,8 @@
 #define LEDC_FREQUENCY          (4000) // Frequency in Hertz. Set frequency at 4 kHz
 #endif
 
-#define LOW_PULSE 100
-#define FAST_PULSE 50
+#define SLOW_PULSE 350
+#define FAST_PULSE 100
 #define PULSE_DURATION 20
 #define NUM_PULSE 3
 // ! ===========================================================================
@@ -264,14 +264,14 @@ uint8_t* HapticController::hay_escritura(){
 }
 
 void HapticController::emitir_vibracion(int value){
-    uint32_t time_pulse;
+    uint32_t time_pulse = SLOW_PULSE;
     switch (value)
     {
-        case 100:
+        case 1:
             time_pulse = FAST_PULSE;
             break;
-        case 50:
-            time_pulse = LOW_PULSE;
+        case 2:
+            time_pulse = SLOW_PULSE;
         default:
             break;
     }
