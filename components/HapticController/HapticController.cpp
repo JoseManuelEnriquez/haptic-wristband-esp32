@@ -34,6 +34,7 @@
 #define LEDC_FREQUENCY          (4000) // Frequency in Hertz. Set frequency at 4 kHz
 #endif
 
+#define STOP_PULSE 0
 #define SLOW_PULSE 350
 #define FAST_PULSE 100
 #define PULSE_DURATION 20
@@ -142,6 +143,28 @@ static esp_ble_adv_data_t scan_rsp_data = {
 // ! ===========================================================================
 // ! SECTION: IMPLEMENTACIÓN DE LA CLASE HAPTIC
 // ! ===========================================================================
+
+typedef struct {
+    uint32_t tiempo_on_ms;
+    uint32_t tiempo_off_ms;
+} PWMPulseConfig_t;
+
+PWMPulseConfig_t pwmConfig;
+TaskHandle_t xPWMTaskHandle = NULL;
+
+void vPWM_Task(void *pvParameters) {
+    PWMPulseConfig_t *config = (PWMPulseConfig_t *)pvParameters;
+
+    while (1) {
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 4096);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        vTaskDelay(pdMS_TO_TICKS(config->tiempo_on_ms));
+
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        vTaskDelay(pdMS_TO_TICKS(config->tiempo_off_ms));
+    }
+}
 
 static HapticController* haptic_controller = nullptr;
 
@@ -267,6 +290,9 @@ void HapticController::emitir_vibracion(int value){
     uint32_t time_pulse = SLOW_PULSE;
     switch (value)
     {
+        case 0:
+            time_pulse = STOP_PULSE;
+            break;
         case 1:
             time_pulse = FAST_PULSE;
             break;
@@ -275,14 +301,27 @@ void HapticController::emitir_vibracion(int value){
         default:
             break;
     }
-    for(int i = 0; i < NUM_PULSE; i++){
-        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
-        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-        vTaskDelay(pdMS_TO_TICKS(PULSE_DURATION));
-
+    if(time_pulse == STOP_PULSE){
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-        vTaskDelay(pdMS_TO_TICKS(time_pulse));
+        if (xPWMTaskHandle != NULL) {
+            vTaskDelete(xPWMTaskHandle);
+            xPWMTaskHandle = NULL;
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        }
+    }else{
+        if (xPWMTaskHandle != NULL) {
+            vTaskDelete(xPWMTaskHandle);
+            xPWMTaskHandle = NULL;
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        }
+
+        pwmConfig.tiempo_on_ms  = PULSE_DURATION;
+        pwmConfig.tiempo_off_ms = time_pulse;
+
+        xTaskCreate(vPWM_Task, "PWM_Task", 2048, &pwmConfig, 5, &xPWMTaskHandle);
     }
 }
 
