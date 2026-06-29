@@ -39,6 +39,7 @@
 #define FAST_PULSE 100
 #define PULSE_DURATION 20
 #define NUM_PULSE 3
+
 // ! ===========================================================================
 // ! SECTION: DECLARACIONES FUNCIONES STATIC
 // ! ===========================================================================
@@ -77,7 +78,7 @@ struct gatts_profile_inst {
 
 // * --- struct del profile necesario ---
 static struct gatts_profile_inst app_profile = {
-    .gatts_cb = gatts_profile_event_handler,
+    .gatts_cb = gatts_profile_event_handler, 
     .gatts_if = ESP_GATT_IF_NONE,
 };
 
@@ -337,7 +338,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
     {
         case ESP_GATTS_REG_EVT: { // Se configura los datos de escaneo y avisos
             ESP_LOGI(GATTS_TAG, "GATT server register, status %d, app_id %d, gatts_if %d", param->reg.status, param->reg.app_id, gatts_if);
-            // * Configuracion del servicio
+            // * Creacion y configuracion del servicio
             app_profile.service_id.is_primary = true;
             app_profile.service_id.id.inst_id = 0x00;
             app_profile.service_id.id.uuid.len = ESP_UUID_LEN_16;
@@ -375,9 +376,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
                 esp_ble_gap_start_advertising(&adv_params);  // vuelve a anunciar
                 break;
 
-        case ESP_GATTS_CREATE_EVT: { // Creamos las caracteristicas
-
+        case ESP_GATTS_CREATE_EVT: { 
             ESP_LOGI(GATTS_TAG, "Service create, status %d,  service_handle %d", param->create.status, param->create.service_handle);
+            /*
+            Estamos creando la caracteristica con id HAPTIC_CHAR_UUID -> 0xEE01
+            service_handle se crea cuando creamos el servicio en el evento ESP_GATTS_REG_EVT,
+            solo tenemos que comenzar el servicio y agregar los permisos (write en nuestro caso)
+            para permitir hacer acciones con el.
+            */
             app_profile.service_handle = param->create.service_handle;
             app_profile.char_uuid.len = ESP_UUID_LEN_16;
             app_profile.char_uuid.uuid.uuid16 = HAPTIC_CHAR_UUID;
@@ -397,7 +403,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
             }
             break;
         }
-
         case ESP_GATTS_WRITE_EVT: {
 
             if (!param->write.is_prep) {  // write completo, no preparatorio
@@ -408,7 +413,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
             }
             break;
         }
-
         default:
             ESP_LOGW(GATTS_TAG, "Evento desconocido");
             break;
@@ -416,12 +420,16 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
 }
 
 // ? --- Manejador eventos GATTS y configuracion del profile ---
+// Esta funcion se registra en el init de HapticController y es para asignar a cada profile
+// un manejador de evento para sus conexiones y ademas de un ID.
+// No solo sirve para registrar su callback. Como todo evento que ocurra en el GATT pasa por esta
+// funcion, tiene que llamar a la callback del id/profile correspondiente.
 static void gatts_event_handler(esp_gatts_cb_event_t event, 
                                 esp_gatt_if_t gatts_if, 
                                 esp_ble_gatts_cb_param_t *param)
 {
     /* Cuando ya hemos registrado la funcion y genera el evento, lo usamos para inicialziar
-    la interfaz del app_profile */
+    la interfaz del app_profile.*/
     if (event == ESP_GATTS_REG_EVT) {
         if (param->reg.status == ESP_GATT_OK) {
             app_profile.gatts_if = gatts_if;
@@ -448,13 +456,13 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event,
 {
     switch (event) {
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT: // Salta cuando se ha configurado los datos de avisos
-        adv_config_done &= (~adv_config_flag); // Limpiamo flag
+        adv_config_done &= (~adv_config_flag); // Limpiamos flag
         if (adv_config_done == 0){
             esp_ble_gap_start_advertising(&adv_params);
         }
         break;
     case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT: // Salta cuando se ha configurado los datos de escaneo
-        adv_config_done &= (~scan_rsp_config_flag); // Limpiamo flag
+        adv_config_done &= (~scan_rsp_config_flag); // Limpiamos flag
         if (adv_config_done == 0){
             esp_ble_gap_start_advertising(&adv_params);
         }
