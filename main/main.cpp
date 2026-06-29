@@ -5,7 +5,6 @@
 
 #define PIN_PWM GPIO_NUM_13
 #define RESTART 0
-#define SECONDS_5 5000000
 
 extern "C" void app_main(void)
 {
@@ -23,10 +22,11 @@ extern "C" void app_main(void)
             haptic_controller->emitir_vibracion(*value);
             timer_controller.set_count(RESTART);
         }
-        if(timer_controller.get_time_seconds() > SECONDS_5){
+        if(timer_controller.get_time_seconds() > 5){
             timer_controller.set_count(RESTART);
             haptic_controller->emitir_vibracion(0);
         }
+        ESP_LOGI("Timer", "get_time: %f", timer_controller.get_time_seconds());
         vTaskDelay(10);
     } 
 }
