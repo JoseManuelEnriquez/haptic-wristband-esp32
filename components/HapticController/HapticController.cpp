@@ -31,13 +31,13 @@
 #define LEDC_FREQUENCY          (400) // Frequency in Hertz. Set frequency at 400 Hz
 #else
 #define LEDC_CLK_SRC            LEDC_AUTO_CLK
-#define LEDC_FREQUENCY          (4000) // Frequency in Hertz. Set frequency at 4 kHz
+#define LEDC_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 4 kHz
 #endif
 
 #define STOP_PULSE 0
-#define SLOW_PULSE 350
+#define SLOW_PULSE 500
 #define FAST_PULSE 100
-#define PULSE_DURATION 20
+#define PULSE_DURATION 200
 #define NUM_PULSE 3
 // ! ===========================================================================
 // ! SECTION: DECLARACIONES FUNCIONES STATIC
