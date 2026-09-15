@@ -22,9 +22,16 @@
 #include "esp_bt_device.h"
 #include "esp_gatt_common_api.h"
 
-#include "driver/ledc.h"
-
 #include "sdkconfig.h"
+
+#include "PwmController.hpp"
+
+#define STOP 0
+#define SLOW 1
+#define FAST 2
+#define SLOW_PULSE 350
+#define FAST_PULSE 100
+#define PULSE_DURATION 20
 
 class HapticController {
     private:
@@ -32,6 +39,7 @@ class HapticController {
         bool new_write;
         uint8_t last_value;
         HapticController(int _pin_gpio);
+        PwmController pwm_controller;
     public:
         void init();
         static HapticController* get_instance(int pin_gpio);
