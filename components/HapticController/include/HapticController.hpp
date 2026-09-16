@@ -29,9 +29,9 @@
 #define STOP 0
 #define SLOW 1
 #define FAST 2
-#define SLOW_PULSE 350
-#define FAST_PULSE 100
-#define PULSE_DURATION 20
+#define SLOW_PULSE 50
+#define FAST_PULSE 20
+#define PULSE_DURATION 30
 
 class HapticController {
     private:
@@ -39,14 +39,14 @@ class HapticController {
         bool new_write;
         uint8_t last_value;
         HapticController(int _pin_gpio);
-        PwmController pwm_controller;
+        PwmController* pwm_controller;
     public:
         void init();
         static HapticController* get_instance(int pin_gpio);
         void onWrite(uint8_t value);
         uint8_t* hay_escritura();
         void emitir_vibracion(int value);
-        void set_intensity(int value);
+        friend void vHapticTask(void* pvHapticTask);
 };
 
 #endif

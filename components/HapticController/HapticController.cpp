@@ -20,29 +20,9 @@
 #define HAPTIC_CHAR_UUID 0xEE01
 #define GATTS_NUM_HANDLES 4 // ! Alert: Se debe revisar el numero
 
-#define LEDC_TIMER              LEDC_TIMER_0
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
-#define LEDC_OUTPUT_IO          (2) // Define the output GPIO
 #define LEDC_CHANNEL            LEDC_CHANNEL_0
-#define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY               (8192) // Set duty to 50%. (2 ** 13) * 50% = 4096
-#if CONFIG_PM_ENABLE
-#define LEDC_CLK_SRC            LEDC_USE_RC_FAST_CLK // choose a clock source that can maintain during light sleep
-#define LEDC_FREQUENCY          (400) // Frequency in Hertz. Set frequency at 400 Hz
-#else
-#define LEDC_CLK_SRC            LEDC_AUTO_CLK
-#define LEDC_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 4 kHz
-#endif
 
-<<<<<<< HEAD
-#define STOP_PULSE 0
-#define SLOW_PULSE 500
-#define FAST_PULSE 50
-#define PULSE_DURATION 200
-#define NUM_PULSE 3
-
-=======
->>>>>>> 924d9e969afc071b9c36a87e7181f7af82c16f08
 // ! ===========================================================================
 // ! SECTION: DECLARACIONES FUNCIONES STATIC
 // ! ===========================================================================
@@ -163,7 +143,7 @@ static HapticConfig config;
 HapticController::HapticController(int _pin_gpio): pin_gpio(_pin_gpio),
                                                    new_write(false),
                                                    last_value(0),
-                                                   pwm_controller(PwmController(_pin_gpio))
+                                                   pwm_controller(new PwmController(_pin_gpio))
 {}
 
 // ? --- Singleton ---
@@ -241,6 +221,11 @@ void HapticController::init(){
     if (local_mtu_ret){
         ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
+
+    // Se crea una vibracion para darle feedback al usuario de que esta iniciado.
+    haptic_controller->pwm_controller->start_pwm(4096);
+    vTaskDelay(100);
+    haptic_controller->pwm_controller->stop_pwm();
 }
 
 void HapticController::onWrite(uint8_t value){
@@ -260,36 +245,35 @@ void HapticController::emitir_vibracion(int value){
     if(xHapticTaskHandle != NULL){
         vTaskDelete(xHapticTaskHandle);
         xHapticTaskHandle = NULL;
-        pwm_controller.stop_pwm();
+        pwm_controller->stop_pwm();
     }
     config.tiempo_on_ms  = PULSE_DURATION;
     switch (value)
     {
         case SLOW:
             config.tiempo_off_ms = SLOW_PULSE;
+            xTaskCreate(vHapticTask, "Haptic_Task", 2048, &config, 5, &xHapticTaskHandle);
             break;
         case FAST:
             config.tiempo_off_ms = FAST_PULSE;
+            xTaskCreate(vHapticTask, "Haptic_Task", 2048, &config, 5, &xHapticTaskHandle);
         default:
             break;
     }
-    
-    xTaskCreate(vHapticTask, "Haptic_Task", 2048, &config, 5, &xHapticTaskHandle);
 }
 
+/* HapticTask es una funcion amiga de HapticController por lo que puede acceder al atributo privado. Es necesario
+para poder acceder a pwm_controller */
 void vHapticTask(void* pvHapticTask){
     HapticConfig* config_task = (HapticConfig*) pvHapticTask;
     while(1){
-        pwm_controller.start_pwm(4096);
+        haptic_controller->pwm_controller->start_pwm(4096);
         vTaskDelay(config_task->tiempo_on_ms);
-        pwm_controller.stop_pwm();
+        haptic_controller->pwm_controller->stop_pwm();
         vTaskDelay(config_task->tiempo_off_ms);
     }
 }
 
-void HapticController::set_intensity(int value){
-    ESP_ERROR_CHECK(ledc_set_duty_with_hpoint(LEDC_MODE, LEDC_CHANNEL, value, value));
-}
 
 // ! ===========================================================================
 // ! SECTION: IMPLEMENTACIÓN FUNCIONES STATIC

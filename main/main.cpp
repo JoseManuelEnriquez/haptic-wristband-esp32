@@ -11,7 +11,6 @@ extern "C" void app_main(void)
     HapticController* haptic_controller = HapticController::get_instance(PIN_PWM);
     TimerController timer_controller = TimerController();
     haptic_controller->init();
-    haptic_controller->set_intensity(2048);
     uint8_t* value;
 
     timer_controller.start();
