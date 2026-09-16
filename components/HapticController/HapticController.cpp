@@ -34,12 +34,15 @@
 #define LEDC_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 4 kHz
 #endif
 
+<<<<<<< HEAD
 #define STOP_PULSE 0
 #define SLOW_PULSE 500
 #define FAST_PULSE 50
 #define PULSE_DURATION 200
 #define NUM_PULSE 3
 
+=======
+>>>>>>> 924d9e969afc071b9c36a87e7181f7af82c16f08
 // ! ===========================================================================
 // ! SECTION: DECLARACIONES FUNCIONES STATIC
 // ! ===========================================================================
@@ -145,62 +148,28 @@ static esp_ble_adv_data_t scan_rsp_data = {
 // ! SECTION: IMPLEMENTACIÓN DE LA CLASE HAPTIC
 // ! ===========================================================================
 
-typedef struct {
-    uint32_t tiempo_on_ms;
-    uint32_t tiempo_off_ms;
-} PWMPulseConfig_t;
-
-PWMPulseConfig_t pwmConfig;
-TaskHandle_t xPWMTaskHandle = NULL;
-
-void vPWM_Task(void *pvParameters) {
-    PWMPulseConfig_t *config = (PWMPulseConfig_t *)pvParameters;
-
-    while (1) {
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 4096);
-        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-        vTaskDelay(pdMS_TO_TICKS(config->tiempo_on_ms));
-
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-        vTaskDelay(pdMS_TO_TICKS(config->tiempo_off_ms));
-    }
-}
+void vHapticTask(void* pvHapticTask);
 
 static HapticController* haptic_controller = nullptr;
+static TaskHandle_t xHapticTaskHandle = NULL;
+typedef struct {
+    int tiempo_on_ms;
+    int tiempo_off_ms;
+}HapticConfig;
+
+static HapticConfig config;
 
 // ? --- Constructor ---
 HapticController::HapticController(int _pin_gpio): pin_gpio(_pin_gpio),
                                                    new_write(false),
-                                                   last_value(0)
+                                                   last_value(0),
+                                                   pwm_controller(PwmController(_pin_gpio))
 {}
 
 // ? --- Singleton ---
 HapticController* HapticController::get_instance(int pin_gpio){
     if(!haptic_controller){
         haptic_controller = new HapticController(pin_gpio);
-        // Prepare and then apply the LEDC PWM timer configuration
-        ledc_timer_config_t ledc_timer = {
-            .speed_mode       = LEDC_MODE,
-            .duty_resolution  = LEDC_DUTY_RES,
-            .timer_num        = LEDC_TIMER,
-            .freq_hz          = LEDC_FREQUENCY,  // Set output frequency at 4 kHz
-            .clk_cfg          = LEDC_CLK_SRC,
-        };
-
-        ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
-        ledc_channel_config_t ledc_channel = {
-            .gpio_num       = pin_gpio,
-            .speed_mode     = LEDC_MODE,
-            .channel        = LEDC_CHANNEL,
-            .timer_sel      = LEDC_TIMER,
-            .duty           = 0, // Set duty to 0%
-            .hpoint         = 0,
-            #if CONFIG_PM_ENABLE
-                    .sleep_mode     = LEDC_SLEEP_MODE_KEEP_ALIVE,
-            #endif
-        };
-        ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
     }
     return haptic_controller;
 }
@@ -288,41 +257,33 @@ uint8_t* HapticController::hay_escritura(){
 }
 
 void HapticController::emitir_vibracion(int value){
-    uint32_t time_pulse = SLOW_PULSE;
+    if(xHapticTaskHandle != NULL){
+        vTaskDelete(xHapticTaskHandle);
+        xHapticTaskHandle = NULL;
+        pwm_controller.stop_pwm();
+    }
+    config.tiempo_on_ms  = PULSE_DURATION;
     switch (value)
     {
-        case 0:
-            time_pulse = STOP_PULSE;
+        case SLOW:
+            config.tiempo_off_ms = SLOW_PULSE;
             break;
-        case 1:
-            time_pulse = FAST_PULSE;
-            break;
-        case 2:
-            time_pulse = SLOW_PULSE;
+        case FAST:
+            config.tiempo_off_ms = FAST_PULSE;
         default:
             break;
     }
-    if(time_pulse == STOP_PULSE){
-        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
-        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-        if (xPWMTaskHandle != NULL) {
-            vTaskDelete(xPWMTaskHandle);
-            xPWMTaskHandle = NULL;
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-        }
-    }else{
-        if (xPWMTaskHandle != NULL) {
-            vTaskDelete(xPWMTaskHandle);
-            xPWMTaskHandle = NULL;
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-        }
+    
+    xTaskCreate(vHapticTask, "Haptic_Task", 2048, &config, 5, &xHapticTaskHandle);
+}
 
-        pwmConfig.tiempo_on_ms  = PULSE_DURATION;
-        pwmConfig.tiempo_off_ms = time_pulse;
-
-        xTaskCreate(vPWM_Task, "PWM_Task", 2048, &pwmConfig, 5, &xPWMTaskHandle);
+void vHapticTask(void* pvHapticTask){
+    HapticConfig* config_task = (HapticConfig*) pvHapticTask;
+    while(1){
+        pwm_controller.start_pwm(4096);
+        vTaskDelay(config_task->tiempo_on_ms);
+        pwm_controller.stop_pwm();
+        vTaskDelay(config_task->tiempo_off_ms);
     }
 }
 

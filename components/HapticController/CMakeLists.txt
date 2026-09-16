@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "HapticController.cpp"
+    SRCS "PwmController.cpp" "HapticController.cpp"
     INCLUDE_DIRS "include"
     REQUIRES nvs_flash bt esp_driver_ledc
 )
