@@ -25,7 +25,7 @@
 #define LEDC_OUTPUT_IO          (2) // Define the output GPIO
 #define LEDC_CHANNEL            LEDC_CHANNEL_0
 #define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY               (4096) // Set duty to 50%. (2 ** 13) * 50% = 4096
+#define LEDC_DUTY               (8192) // Set duty to 50%. (2 ** 13) * 50% = 4096
 #if CONFIG_PM_ENABLE
 #define LEDC_CLK_SRC            LEDC_USE_RC_FAST_CLK // choose a clock source that can maintain during light sleep
 #define LEDC_FREQUENCY          (400) // Frequency in Hertz. Set frequency at 400 Hz
@@ -36,7 +36,7 @@
 
 #define STOP_PULSE 0
 #define SLOW_PULSE 500
-#define FAST_PULSE 100
+#define FAST_PULSE 50
 #define PULSE_DURATION 200
 #define NUM_PULSE 3
 // ! ===========================================================================
@@ -323,6 +323,10 @@ void HapticController::emitir_vibracion(int value){
 
         xTaskCreate(vPWM_Task, "PWM_Task", 2048, &pwmConfig, 5, &xPWMTaskHandle);
     }
+}
+
+void HapticController::set_intensity(int value){
+    ESP_ERROR_CHECK(ledc_set_duty_with_hpoint(LEDC_MODE, LEDC_CHANNEL, value, value));
 }
 
 // ! ===========================================================================

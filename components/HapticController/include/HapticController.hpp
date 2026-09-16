@@ -38,6 +38,7 @@ class HapticController {
         void onWrite(uint8_t value);
         uint8_t* hay_escritura();
         void emitir_vibracion(int value);
+        void set_intensity(int value);
 };
 
 #endif
