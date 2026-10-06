@@ -18,7 +18,7 @@
 #define scan_rsp_config_flag (1 << 1)
 #define GATTS_SERVICE_UUID 0x00EE
 #define HAPTIC_CHAR_UUID 0xEE01
-#define GATTS_NUM_HANDLES 4 // ! Alert: Se debe revisar el numero
+#define GATTS_NUM_HANDLES 4 
 
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL            LEDC_CHANNEL_0
@@ -81,8 +81,8 @@ static uint8_t adv_service_uuid128[16] = {
 
 // ? --- parametros de avisos ---
 static esp_ble_adv_params_t adv_params = {
-    .adv_int_min        = ESP_BLE_GAP_ADV_ITVL_MS(20),
-    .adv_int_max        = ESP_BLE_GAP_ADV_ITVL_MS(40),
+    .adv_int_min        = ESP_BLE_GAP_ADV_ITVL_MS(100),
+    .adv_int_max        = ESP_BLE_GAP_ADV_ITVL_MS(200),
     .adv_type           = ADV_TYPE_IND,
     .own_addr_type      = BLE_ADDR_TYPE_PUBLIC,
     .channel_map        = ADV_CHNL_ALL,
@@ -94,8 +94,8 @@ static esp_ble_adv_data_t adv_data = {
     .set_scan_rsp = false,
     .include_name = true,
     .include_txpower = false,
-    .min_interval = ESP_BLE_GAP_CONN_ITVL_MS(7.5), //slave connection min interval
-    .max_interval = ESP_BLE_GAP_CONN_ITVL_MS(20), //slave connection max interval
+    .min_interval = ESP_BLE_GAP_CONN_ITVL_MS(200), //slave connection min interval
+    .max_interval = ESP_BLE_GAP_CONN_ITVL_MS(200), //slave connection max interval
     .appearance = 0x00,
     .manufacturer_len = 0, //TEST_MANUFACTURER_DATA_LEN,
     .p_manufacturer_data =  NULL, //&test_manufacturer[0],
@@ -104,7 +104,7 @@ static esp_ble_adv_data_t adv_data = {
     .service_uuid_len = sizeof(adv_service_uuid128),
     .p_service_uuid = adv_service_uuid128,
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-};
+};  
 
 // ? --- datos de los mensajes de escaneo ---
 static esp_ble_adv_data_t scan_rsp_data = {

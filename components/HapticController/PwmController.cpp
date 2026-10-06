@@ -11,7 +11,7 @@
 #define LEDC_FREQUENCY          (400) // Frequency in Hertz. Set frequency at 400 Hz
 #else
 #define LEDC_CLK_SRC            LEDC_AUTO_CLK
-#define LEDC_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 4 kHz
+#define LEDC_FREQUENCY          (1000) // Frequency in Hertz. Set frequency at 1 kHz
 #endif
 
 PwmController::PwmController(int _pin_gpio){

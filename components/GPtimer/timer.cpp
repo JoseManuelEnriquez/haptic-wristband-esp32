@@ -13,11 +13,13 @@ TimerController::TimerController(): timer(NULL){
 }
 
 void TimerController::start(){
+    gptimer_enable(timer);
     gptimer_start(timer);
 }
 
 void TimerController::stop(){
     gptimer_stop(timer);
+    gptimer_disable(timer);
 }
 
 double TimerController::get_time_seconds(){
