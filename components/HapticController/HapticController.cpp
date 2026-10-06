@@ -223,9 +223,11 @@ void HapticController::init(){
     }
 
     // Se crea una vibracion para darle feedback al usuario de que esta iniciado.
+    /*
     haptic_controller->pwm_controller->start_pwm(4096);
     vTaskDelay(100);
     haptic_controller->pwm_controller->stop_pwm();
+    */
 }
 
 void HapticController::onWrite(uint8_t value){
