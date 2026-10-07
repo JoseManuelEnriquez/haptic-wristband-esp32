@@ -25,6 +25,7 @@
 #include "sdkconfig.h"
 
 #include "PwmController.hpp"
+#include "timer.hpp"
 
 #define STOP 0
 #define SLOW 1

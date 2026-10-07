@@ -266,12 +266,23 @@ void HapticController::emitir_vibracion(int value){
 para poder acceder a pwm_controller */
 void vHapticTask(void* pvHapticTask){
     HapticConfig* config_task = (HapticConfig*) pvHapticTask;
+    TimerController timer_controller = TimerController();
+    timer_controller.set_count(0);
     while(1){
+        timer_controller.start();
         haptic_controller->pwm_controller->start_pwm(4096);
         vTaskDelay(config_task->tiempo_on_ms);
         haptic_controller->pwm_controller->stop_pwm();
         vTaskDelay(config_task->tiempo_off_ms);
+        ESP_LOGI("Timer", "get_time: %f", timer_controller.get_time_seconds());
+        timer_controller.stop();
+        if(timer_controller.get_time_seconds() > 5){
+            break;
+        }
     }
+
+    xHapticTaskHandle = NULL;
+    vTaskDelete(NULL);   // NULL = borrarse a sí misma
 }
 
 

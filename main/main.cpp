@@ -12,27 +12,16 @@ void pm_init();
 extern "C" void app_main(void)
 {
     HapticController* haptic_controller = HapticController::get_instance(PIN_PWM);
-    TimerController timer_controller = TimerController();
     haptic_controller->init();
     pm_init();
     uint8_t* has_read;
 
-    timer_controller.start();
-    timer_controller.set_count(RESTART);
     while(1){
-        timer_controller.start();
         has_read = haptic_controller->hay_escritura();
         if(has_read != nullptr){
             ESP_LOGI("MAIN","Escritura recibida: %d", *has_read);
             haptic_controller->emitir_vibracion(*has_read);
-            timer_controller.set_count(RESTART);
         }
-        if(timer_controller.get_time_seconds() > 5){
-            timer_controller.set_count(RESTART);
-            haptic_controller->emitir_vibracion(0);
-        }
-        ESP_LOGI("Timer", "get_time: %f", timer_controller.get_time_seconds());
-        timer_controller.stop();
         vTaskDelay(200);
     } 
 }
