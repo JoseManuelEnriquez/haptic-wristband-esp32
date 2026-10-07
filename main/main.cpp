@@ -20,6 +20,7 @@ extern "C" void app_main(void)
     timer_controller.start();
     timer_controller.set_count(RESTART);
     while(1){
+        timer_controller.start();
         has_read = haptic_controller->hay_escritura();
         if(has_read != nullptr){
             ESP_LOGI("MAIN","Escritura recibida: %d", *has_read);
@@ -39,7 +40,8 @@ extern "C" void app_main(void)
 void pm_init(){
     esp_pm_config_t pm_config = {
         .max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ, // Max Frequency: 80MHz
-        .light_sleep_enable = false, // Se desactiva porque igualmente no podemos entrar en modo light sleep por BLE
+        .min_freq_mhz = 10,
+        .light_sleep_enable = true, // Se desactiva porque igualmente no podemos entrar en modo light sleep por BLE
     };
 
     ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
