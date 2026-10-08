@@ -49,7 +49,7 @@ esp_err_t Battery::read_adc(double* voltage){
         if(calibrated){
             ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali_chan0_handle, raw_data, &volt));
             ESP_LOGI(TAG, "Voltaje calibrado: %f", volt);
-            *voltage += volt;
+            *voltage += (volt / 1000.0); // se divide por 1000 para pasar de mV -> V
         }
     }
 

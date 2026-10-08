@@ -18,27 +18,6 @@ static void vReadADCTask(void* pReadADCTask);
 static void vPercentageTask(void* pPercentageTask);
 static void vLedTask(void* pLedTask);
 
-extern "C" void app_main(void)
-{
-    Battery battery = Battery(PIN_ADC);
-    xTaskCreate(vReadADCTask, "ReadADC_Task", 2048, NULL, 4, NULL);
-    xTaskCreate(vPercentageTask, "Percentage_Task", 2048, NULL, 5, NULL);
-    gpio_init();
-    HapticController* haptic_controller = HapticController::get_instance(PIN_PWM);
-    haptic_controller->init();
-    pm_init();
-    uint8_t* has_read;
-
-    while(1){
-        has_read = haptic_controller->hay_escritura();
-        if(has_read != nullptr){
-            ESP_LOGI("MAIN","Escritura recibida: %d", *has_read);
-            haptic_controller->emitir_vibracion(*has_read);
-        }
-        vTaskDelay(200);
-    } 
-}
-
 void pm_init(){
     esp_pm_config_t pm_config = {
         .max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ, // Max Frequency: 80MHz
@@ -122,4 +101,25 @@ static void vLedTask(void* pLedTask){
     }
 
     vTaskDelete(NULL);
+}
+
+extern "C" void app_main(void)
+{
+    Battery battery = Battery(PIN_ADC);
+    xTaskCreate(vReadADCTask, "ReadADC_Task", 2048, NULL, 4, NULL);
+    xTaskCreate(vPercentageTask, "Percentage_Task", 2048, NULL, 5, NULL);
+    gpio_init();
+    HapticController* haptic_controller = HapticController::get_instance(PIN_PWM);
+    haptic_controller->init();
+    pm_init();
+    uint8_t* has_read;
+
+    while(1){
+        has_read = haptic_controller->hay_escritura();
+        if(has_read != nullptr){
+            ESP_LOGI("MAIN","Escritura recibida: %d", *has_read);
+            haptic_controller->emitir_vibracion(*has_read);
+        }
+        vTaskDelay(200);
+    } 
 }
