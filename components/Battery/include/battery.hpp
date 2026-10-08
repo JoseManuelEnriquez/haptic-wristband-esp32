@@ -2,6 +2,7 @@
 #define BATTERY_HPP
 
 #include <vector>
+#include "esp_adc/adc_oneshot.h"
 
 #define MAX_VECTOR_LEN 5
 #define NUMBER_OF_READS 15
@@ -15,6 +16,7 @@ class Battery{
     private:
         int _pin_gpio;
         uint8_t index;
+        uint8_t number_reads;
         bool calibrated;
         std::vector<double> buf;
         adc_cali_handle_t adc1_cali_chan0_handle;
