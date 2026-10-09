@@ -30,7 +30,7 @@ void pm_init(){
 
 void gpio_init(){
     gpio_config_t config = {
-        .pin_bit_mask = (PIN_LED) << 1,
+        .pin_bit_mask = 1 << (PIN_LED),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -53,6 +53,7 @@ static void vReadADCTask(void* pReadADCTask){
     while(1){
         battery->read_adc(&voltage);
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        ESP_LOGI("Read Task","Despierta...");
     }
 
     vTaskDelete(NULL);
@@ -73,6 +74,7 @@ static void vPercentageTask(void* pPercentageTask){
 
     while(1){
         battery->voltToPercentage(&percentage);
+        ESP_LOGI("Percentage Task", "Porcentaje bateria: %f",percentage);
         if(percentage < MIN_UMBRAL_BATTERY && percentage != 0.0){
             xTaskCreate(vLedTask, "LED_Task", 2048, NULL, 5, &xLedTaskHandle);
         }else{
@@ -82,19 +84,21 @@ static void vPercentageTask(void* pPercentageTask){
             }
         }
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        ESP_LOGI("Percentage Task","Despierta...");
     }
 
     vTaskDelete(NULL);
 }
 
 static void vLedTask(void* pLedTask){
+    ESP_LOGI("LED Task", "Despierta...");
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    
+
     // Cambia de estado cada 500 ms (frecuencia de parpadeo completa = 1 Hz)
     const TickType_t xFrequency = pdMS_TO_TICKS(500);
-    uint8_t level = 0;
+    uint8_t level = 1;
     for (;;) {
-        level ^= level;
+        // level ^= level;
         gpio_set_level(PIN_LED, level);
         // Bloquea la tarea hasta que transcurran exactamente 500 ms
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
@@ -106,8 +110,9 @@ static void vLedTask(void* pLedTask){
 extern "C" void app_main(void)
 {
     Battery battery = Battery(PIN_ADC);
-    xTaskCreate(vReadADCTask, "ReadADC_Task", 2048, NULL, 4, NULL);
-    xTaskCreate(vPercentageTask, "Percentage_Task", 2048, NULL, 5, NULL);
+    battery.init();
+    xTaskCreate(vReadADCTask, "ReadADC_Task", 2048, &battery, 4, NULL);
+    xTaskCreate(vPercentageTask, "Percentage_Task", 2048, &battery, 5, NULL);
     gpio_init();
     HapticController* haptic_controller = HapticController::get_instance(PIN_PWM);
     haptic_controller->init();

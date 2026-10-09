@@ -16,11 +16,11 @@ class Battery{
     private:
         int _pin_gpio;
         uint8_t index;
-        uint8_t number_reads;
         bool calibrated;
         std::vector<double> buf;
         adc_cali_handle_t adc1_cali_chan0_handle;
         adc_oneshot_unit_handle_t adc1_handle;
+        bool first_read;
 };
 
 #endif

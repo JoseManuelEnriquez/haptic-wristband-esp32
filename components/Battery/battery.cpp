@@ -5,7 +5,7 @@
 #include "esp_log.h"
 
 #define ADC_UNIT ADC_UNIT_2
-#define ADC_ATTEN ADC_ATTEN_DB_0
+#define ADC_ATTEN ADC_ATTEN_DB_12
 #define ADC_CHAN ADC_CHANNEL_5 
 
 const static char *TAG = "ADC"; 
@@ -14,11 +14,11 @@ static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_att
 Battery::Battery(int pin_gpio):
 _pin_gpio(pin_gpio), 
 index(0), 
-number_reads(0),
 calibrated(false), 
 buf(std::vector<double>(MAX_VECTOR_LEN)),
 adc1_cali_chan0_handle(NULL),
-adc1_handle(NULL)
+adc1_handle(NULL),
+first_read(true)
 {}
 void Battery::init(){
     //-------------ADC1 Init---------------//
@@ -31,7 +31,7 @@ void Battery::init(){
     //-------------ADC1 Config---------------//
     adc_oneshot_chan_cfg_t config = {
         .atten = ADC_ATTEN,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .bitwidth = ADC_BITWIDTH_12,
     };
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CHAN, &config));
 
@@ -44,23 +44,31 @@ esp_err_t Battery::read_adc(double* voltage){
     int volt = 0;
     *voltage = 0.0;
 
-    for(int i = 0; i < NUMBER_OF_READS; i++){
-        ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, ADC_CHAN, &raw_data));
-        if(calibrated){
-            ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali_chan0_handle, raw_data, &volt));
-            ESP_LOGI(TAG, "Voltaje calibrado: %f", volt);
-            *voltage += (volt / 1000.0); // se divide por 1000 para pasar de mV -> V
+    do{
+        for(int i = 0; i < NUMBER_OF_READS; i++){
+            ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, ADC_CHAN, &raw_data));
+            if(calibrated){
+                ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali_chan0_handle, raw_data, &volt));
+                // ESP_LOGI(TAG, "Voltaje calibrado: %f", volt);
+                *voltage += (volt / 1000.0);
+            }
         }
-    }
+        *voltage = *voltage / NUMBER_OF_READS;
+    }while(first_read && *voltage == 0);
 
-    if(number_reads < MAX_VECTOR_LEN)
-        number_reads++;
-
-    *voltage = *voltage / number_reads;
     ESP_LOGI(TAG, "Voltaje promedio: %f V", *voltage);
+
+    if(first_read){
+        for(int i = 0; i < MAX_VECTOR_LEN; i ++){
+            buf[i] = *voltage;
+        }
+        first_read = false;
+    }
 
     buf[index] = *voltage;
     index = (index + 1) % MAX_VECTOR_LEN;
+
+    ESP_LOGI(TAG,"BUFFER - %f - %f - %f - %f - %f", buf[0], buf[1], buf[2], buf[3], buf[4]);
 
     return ESP_OK;
 }
@@ -68,10 +76,10 @@ esp_err_t Battery::read_adc(double* voltage){
 esp_err_t Battery::voltToPercentage(float* percentage){
     
     double voltage = 0.0;
-    for(int i = 0; i < number_reads; i++) // Hago el promedio segun el numero de lecturas realizadas
+    for(int i = 0; i < MAX_VECTOR_LEN; i++) 
         voltage += buf[i];
 
-    voltage = voltage / number_reads; 
+    voltage = voltage / MAX_VECTOR_LEN; 
 
     *percentage = (voltage * 1) / 3.3;
     
