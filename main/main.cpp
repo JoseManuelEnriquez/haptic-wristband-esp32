@@ -30,7 +30,7 @@ void pm_init(){
 
 void gpio_init(){
     gpio_config_t config = {
-        .pin_bit_mask = 1 << (PIN_LED),
+        .pin_bit_mask = (1ULL << PIN_LED),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -96,10 +96,10 @@ static void vLedTask(void* pLedTask){
 
     // Cambia de estado cada 500 ms (frecuencia de parpadeo completa = 1 Hz)
     const TickType_t xFrequency = pdMS_TO_TICKS(500);
-    uint8_t level = 1;
+    uint8_t level = 0;
     for (;;) {
-        // level ^= level;
-        gpio_set_level(PIN_LED, level);
+        gpio_set_level(PIN_LED, level % 2);
+        level++;
         // Bloquea la tarea hasta que transcurran exactamente 500 ms
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
